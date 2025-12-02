@@ -1,0 +1,123 @@
+// ========================================
+// REGLAS DE FIRESTORE
+// ========================================
+// Copia y pega esto en Firebase Console > Firestore Database > Reglas
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función helper para verificar autenticación
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Función helper para verificar que el usuario es el dueño
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Colección de usuarios
+    match /users/{userId} {
+      // Cualquier usuario autenticado puede leer
+      allow read: if isSignedIn();
+      
+      // Solo el dueño puede crear/actualizar su perfil
+      allow create, update: if isSignedIn() && isOwner(userId);
+      
+      // Solo el dueño puede eliminar su perfil
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+    
+    // Colección de reportes
+    match /reports/{reportId} {
+      // Cualquier usuario autenticado puede leer reportes
+      allow read: if isSignedIn();
+      
+      // Cualquier usuario autenticado puede crear reportes
+      allow create: if isSignedIn() 
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.userName is string
+                    && request.resource.data.type is string
+                    && request.resource.data.description is string;
+      
+      // Solo el creador puede actualizar su reporte
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Solo el creador puede eliminar su reporte
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Colección de alertas SOS
+    match /sos_alerts/{alertId} {
+      // Cualquier usuario autenticado puede leer alertas (para seguridad)
+      allow read: if isSignedIn();
+      
+      // Cualquier usuario autenticado puede crear alertas SOS
+      allow create: if isSignedIn() 
+                    && request.resource.data.userId == request.auth.uid;
+      
+      // Solo el creador puede actualizar su alerta
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // No permitir eliminar alertas (para mantener historial)
+      allow delete: if false;
+    }
+  }
+}
+
+// ========================================
+// REGLAS DE FIREBASE STORAGE
+// ========================================
+// Copia y pega esto en Firebase Console > Storage > Reglas
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Carpeta de reportes (fotos y videos)
+    match /reports/{allPaths=**} {
+      // Cualquier usuario autenticado puede leer archivos
+      allow read: if request.auth != null;
+      
+      // Cualquier usuario autenticado puede subir archivos
+      // Restricciones:
+      // - Máximo 10MB por archivo
+      // - Solo imágenes (jpg, jpeg, png, gif, webp) y videos (mp4, mov, avi)
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*') 
+                       || request.resource.contentType.matches('video/.*'));
+      
+      // Permitir eliminar solo archivos del usuario autenticado
+      allow delete: if request.auth != null;
+    }
+    
+    // Carpeta de avatares (opcional para futuras mejoras)
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+
+// ========================================
+// ÍNDICES DE FIRESTORE (Para mejorar rendimiento)
+// ========================================
+// Estos índices se crearán automáticamente cuando Firebase los detecte como necesarios
+// También puedes crearlos manualmente en Firebase Console > Firestore Database > Índices
+
+// Índice compuesto recomendado para reports:
+// Colección: reports
+// Campos: 
+//   - timestamp (Descending)
+//   - status (Ascending)
+
+// Índice compuesto recomendado para reports por tipo:
+// Colección: reports
+// Campos:
+//   - riskLevel (Ascending)
+//   - timestamp (Descending)

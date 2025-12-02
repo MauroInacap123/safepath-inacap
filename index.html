@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SafePath">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>SafePath - Seguridad INACAP</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e88e5">
+    
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAu6p2zxFfmEP0V0RgjCzBIP6UVcddPE_A&libraries=places"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <!-- PANTALLA 1: LOGIN / REGISTRO -->
+    <div class="screen active" id="screen-login">
+        <div class="phone-status-bar">
+            <span id="current-time">9:41</span>
+            <span>📶 <span id="connection-status">WiFi</span> 🔋<span id="battery">87</span>%</span>
+        </div>
+        
+        <div class="screen-content">
+            <div class="logo-container">
+                <img src="safepath-logo-removebg-preview (1).png" alt="SafePath Logo" class="app-logo">
+                <h1>SafePath</h1>
+                <p class="tagline">Sistema de Seguridad INACAP</p>
+            </div>
+            
+            <!-- Tabs para Login/Registro -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login">Iniciar Sesión</button>
+                <button class="auth-tab" id="tab-register">Registrarse</button>
+            </div>
+            
+            <!-- Formulario de Login -->
+            <form id="login-form" class="form-container auth-form active">
+                <div class="form-group">
+                    <label>RUT o Correo Institucional</label>
+                    <input type="text" id="login-identifier" placeholder="12.345.678-9 o tu.correo@inacapmail.cl" required>
+                    <small class="form-hint">Usa tu RUT o correo @inacapmail.cl</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+                
+                <div class="links">
+                    <a href="#" class="link" id="forgot-password">¿Olvidaste tu contraseña?</a>
+                </div>
+            </form>
+            
+            <!-- Formulario de Registro -->
+            <form id="register-form" class="form-container auth-form">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="register-name" placeholder="Ej: Mauricio Bustamante" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>RUT</label>
+                    <input type="text" id="register-rut" placeholder="12.345.678-9" required>
+                    <small class="form-hint">Formato: 12.345.678-9</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Correo Institucional</label>
+                    <input type="email" id="register-email" placeholder="tu.nombre@inacapmail.cl" required>
+                    <small class="form-hint">Debe ser correo @inacapmail.cl</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="register-phone" placeholder="+56 9 1234 5678" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="register-password" placeholder="Mínimo 6 caracteres" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Confirmar Contraseña</label>
+                    <input type="password" id="register-confirm" placeholder="Repite tu contraseña" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Crear Cuenta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: HOME -->
+    <div class="screen" id="screen-home">
+        <div class="phone-status-bar">
+            <span id="home-time">9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <h2>Inicio</h2>
+            <div class="user-greeting">Hola, <span id="user-name-display">Usuario</span></div>
+        </div>
+        
+        <div class="screen-content">
+            <div class="home-logo-container">
+                <img src="logo-safepath.png" alt="SafePath" class="home-logo">
+            </div>
+            
+            <div class="gps-status">
+                <div class="gps-indicator">
+                    <span class="gps-icon pulsing">📍</span>
+                    <span class="gps-text">GPS Activo</span>
+                </div>
+                <p class="location-text" id="current-location">Detectando ubicación...</p>
+                <p class="location-coords" id="current-coords"></p>
+            </div>
+            
+            <div class="panic-button-container">
+                <button id="panic-button" class="panic-button">
+                    <span class="panic-icon">🚨</span>
+                    <span class="panic-text">SOS</span>
+                    <span class="panic-subtext">EMERGENCIA</span>
+                </button>
+                <p class="panic-instruction">Mantén presionado 2 segundos para activar</p>
+            </div>
+            
+            <div class="quick-actions">
+                <button class="btn btn-success" id="report-button">
+                    📝 Reportar Incidente
+                </button>
+                <button class="btn btn-info" id="view-nearby-button">
+                    📍 Ver Reportes Cercanos
+                </button>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-reports">0</div>
+                    <div class="stat-label">Reportes Totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="nearby-reports">0</div>
+                    <div class="stat-label">Cercanos (1km)</div>
+                </div>
+                <div class="stat-card alert">
+                    <div class="stat-number" id="high-risk-reports">0</div>
+                    <div class="stat-label">Alto Riesgo</div>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" data-screen="map">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </div>
+            <div class="nav-item" data-screen="emergency">
+                <span class="nav-icon">🚨</span>
+                <span>Emergencias</span>
+            </div>
+            <div class="nav-item" data-screen="history">
+                <span class="nav-icon">🕒</span>
+                <span>Historial</span>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <span class="nav-icon">👤</span>
+                <span>Perfil</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PANTALLA 3: MAPA EN TIEMPO REAL -->
+    <div class="screen" id="screen-map">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header map-header">
+            <h2>Mapa de Seguridad</h2>
+            <button class="btn btn-small" id="refresh-map">🔄 Actualizar</button>
+        </div>
+        
+        <div class="map-filters">
+            <button class="filter-btn active" data-filter="all">Todos</button>
+            <button class="filter-btn" data-filter="high">🔴 Alto Riesgo</button>
+            <button class="filter-btn" data-filter="medium">🟡 Medio</button>
+            <button class="filter-btn" data-filter="low">🟢 Bajo</button>
+        </div>
+        
+        <div id="map-container"></div>
+        
+        <div class="map-legend">
+            <div class="legend-item"><span class="legend-marker high"></span> Alto Riesgo (Robo, Asalto)</div>
+            <div class="legend-item"><span class="legend-marker medium"></span> Medio Riesgo (Acoso, Sospechoso)</div>
+            <div class="legend-item"><span class="legend-marker low"></span> Bajo Riesgo (Otros)</div>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item active" data-screen="map">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </div>
+            <div class="nav-item" data-screen="emergency">
+                <span class="nav-icon">🚨</span>
+                <span>Emergencias</span>
+            </div>
+            <div class="nav-item" data-screen="history">
+                <span class="nav-icon">🕒</span>
+                <span>Historial</span>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <span class="nav-icon">👤</span>
+                <span>Perfil</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PANTALLA 4: REPORTAR INCIDENTE -->
+    <div class="screen" id="screen-report">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <button class="back-button" onclick="navigateTo('home')">← Volver</button>
+            <h2>Reportar Incidente</h2>
+        </div>
+        
+        <div class="screen-content">
+            <form id="report-form">
+                <h3>Tipo de incidente:</h3>
+                
+                <div class="incident-grid">
+                    <div class="incident-card" data-type="robo" data-risk="high">
+                        <span class="incident-icon">🚨</span>
+                        <span class="incident-name">Robo</span>
+                        <span class="risk-badge high">Alto Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="asalto" data-risk="high">
+                        <span class="incident-icon">⚠️</span>
+                        <span class="incident-name">Asalto</span>
+                        <span class="risk-badge high">Alto Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="acoso" data-risk="medium">
+                        <span class="incident-icon">👥</span>
+                        <span class="incident-name">Acoso</span>
+                        <span class="risk-badge medium">Medio Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="sospechoso" data-risk="medium">
+                        <span class="incident-icon">👤</span>
+                        <span class="incident-name">Sospechoso</span>
+                        <span class="risk-badge medium">Medio Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="incendio" data-risk="high">
+                        <span class="incident-icon">🔥</span>
+                        <span class="incident-name">Incendio</span>
+                        <span class="risk-badge high">Alto Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="salud" data-risk="medium">
+                        <span class="incident-icon">🏥</span>
+                        <span class="incident-name">Emergencia Salud</span>
+                        <span class="risk-badge medium">Medio Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="accidente" data-risk="medium">
+                        <span class="incident-icon">🚗</span>
+                        <span class="incident-name">Accidente</span>
+                        <span class="risk-badge medium">Medio Riesgo</span>
+                    </div>
+                    
+                    <div class="incident-card" data-type="otro" data-risk="low">
+                        <span class="incident-icon">📋</span>
+                        <span class="incident-name">Otro</span>
+                        <span class="risk-badge low">Bajo Riesgo</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Descripción del incidente</label>
+                    <textarea id="report-description" placeholder="Describe lo que sucedió..." required rows="4"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>📍 Ubicación Actual</label>
+                    <input type="text" id="report-location" readonly>
+                    <button type="button" class="btn btn-small" id="update-location-btn">Actualizar Ubicación</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>📷 Adjuntar Foto o Video (Opcional)</label>
+                    <div class="file-upload-area">
+                        <input type="file" id="report-media" accept="image/*,video/*" capture="environment">
+                        <div class="upload-placeholder" id="upload-placeholder">
+                            <span class="upload-icon">📸</span>
+                            <p>Toca para capturar foto/video</p>
+                        </div>
+                        <div class="media-preview" id="media-preview" style="display: none;">
+                            <img id="preview-image" style="display: none;">
+                            <video id="preview-video" controls style="display: none;"></video>
+                            <button type="button" class="btn-remove-media" id="remove-media">✕</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-large">Enviar Reporte</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANTALLA 5: EMERGENCIAS -->
+    <div class="screen" id="screen-emergency">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <h2>Contactos de Emergencia</h2>
+        </div>
+        
+        <div class="screen-content">
+            <div class="info-box emergency-info">
+                <p>🚨 <strong>Números de Emergencia Chile</strong></p>
+                <p>Presiona cualquier contacto para llamar directamente</p>
+            </div>
+            
+            <div class="emergency-grid">
+                <a href="tel:133" class="emergency-card clickable">
+                    <div class="emergency-icon">🚔</div>
+                    <div class="emergency-title">Carabineros</div>
+                    <div class="emergency-number">133</div>
+                    <small>Policía de Chile</small>
+                </a>
+                
+                <a href="tel:131" class="emergency-card clickable">
+                    <div class="emergency-icon">🚑</div>
+                    <div class="emergency-title">SAMU</div>
+                    <div class="emergency-number">131</div>
+                    <small>Ambulancia</small>
+                </a>
+                
+                <a href="tel:132" class="emergency-card clickable">
+                    <div class="emergency-icon">🚒</div>
+                    <div class="emergency-title">Bomberos</div>
+                    <div class="emergency-number">132</div>
+                    <small>Incendios y rescates</small>
+                </a>
+                
+                <a href="tel:134" class="emergency-card clickable">
+                    <div class="emergency-icon">ℹ️</div>
+                    <div class="emergency-title">Información</div>
+                    <div class="emergency-number">134</div>
+                    <small>Información general</small>
+                </a>
+                
+                <a href="tel:149" class="emergency-card clickable">
+                    <div class="emergency-icon">👨‍⚕️</div>
+                    <div class="emergency-title">Salud Responde</div>
+                    <div class="emergency-number">149</div>
+                    <small>Orientación médica</small>
+                </a>
+                
+                <a href="tel:1404" class="emergency-card clickable">
+                    <div class="emergency-icon">👧</div>
+                    <div class="emergency-title">SENAME</div>
+                    <div class="emergency-number">1404</div>
+                    <small>Ayuda menores de edad</small>
+                </a>
+            </div>
+            
+            <button class="btn btn-info btn-large" id="open-chatbot">
+                💬 Asistente de Emergencias
+            </button>
+            
+            <div class="info-box">
+                <h4>💡 Recomendaciones:</h4>
+                <ul>
+                    <li>• Mantén la calma al llamar</li>
+                    <li>• Indica tu ubicación exacta</li>
+                    <li>• Describe la emergencia claramente</li>
+                    <li>• Sigue las instrucciones del operador</li>
+                    <li>• No cuelgues hasta que te lo indiquen</li>
+                </ul>
+            </div>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" data-screen="map">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </div>
+            <div class="nav-item active" data-screen="emergency">
+                <span class="nav-icon">🚨</span>
+                <span>Emergencias</span>
+            </div>
+            <div class="nav-item" data-screen="history">
+                <span class="nav-icon">🕒</span>
+                <span>Historial</span>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <span class="nav-icon">👤</span>
+                <span>Perfil</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PANTALLA 6: HISTORIAL -->
+    <div class="screen" id="screen-history">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <h2>Historial de Reportes</h2>
+            <button class="btn btn-small" id="filter-history">🔍 Filtrar</button>
+        </div>
+        
+        <div class="screen-content">
+            <div id="history-list" class="history-list">
+                <!-- Los reportes se cargarán dinámicamente aquí -->
+            </div>
+            
+            <div id="empty-history" class="empty-state" style="display: none;">
+                <div class="empty-icon">📋</div>
+                <h3>Sin reportes aún</h3>
+                <p>Cuando realices reportes, aparecerán aquí</p>
+            </div>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" data-screen="map">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </div>
+            <div class="nav-item" data-screen="emergency">
+                <span class="nav-icon">🚨</span>
+                <span>Emergencias</span>
+            </div>
+            <div class="nav-item active" data-screen="history">
+                <span class="nav-icon">🕒</span>
+                <span>Historial</span>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <span class="nav-icon">👤</span>
+                <span>Perfil</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PANTALLA 7: PERFIL -->
+    <div class="screen" id="screen-profile">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <h2>Mi Perfil</h2>
+        </div>
+        
+        <div class="screen-content">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <span id="avatar-initial">M</span>
+                </div>
+                <h3 id="profile-name">Mauricio Bustamante</h3>
+                <p class="profile-email" id="profile-email">mauricio.bustamante12@inacapmail.cl</p>
+                <p class="profile-rut" id="profile-rut">12.345.678-9</p>
+            </div>
+            
+            <div class="profile-info">
+                <div class="info-item">
+                    <span class="info-icon">📧</span>
+                    <div class="info-content">
+                        <div class="info-label">Correo</div>
+                        <div class="info-value" id="profile-email-detail">mauricio.bustamante12@inacapmail.cl</div>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-icon">📱</span>
+                    <div class="info-content">
+                        <div class="info-label">Teléfono</div>
+                        <div class="info-value" id="profile-phone-detail">+56 9 1234 5678</div>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-icon">🆔</span>
+                    <div class="info-content">
+                        <div class="info-label">RUT</div>
+                        <div class="info-value" id="profile-rut-detail">12.345.678-9</div>
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <h4>Contactos de Emergencia</h4>
+            <div id="contacts-list"></div>
+            <button class="btn btn-secondary" onclick="navigateTo('add-contact')">+ Agregar Contacto</button>
+            
+            <hr>
+            
+            <div class="profile-actions">
+                <button class="btn btn-primary" onclick="navigateTo('edit-profile')">✏️ Editar Perfil</button>
+                <button class="btn btn-danger" id="logout-button">🚪 Cerrar Sesión</button>
+            </div>
+        </div>
+        
+        <nav class="bottom-nav">
+            <div class="nav-item" data-screen="home">
+                <span class="nav-icon">🏠</span>
+                <span>Inicio</span>
+            </div>
+            <div class="nav-item" data-screen="map">
+                <span class="nav-icon">🗺️</span>
+                <span>Mapa</span>
+            </div>
+            <div class="nav-item" data-screen="emergency">
+                <span class="nav-icon">🚨</span>
+                <span>Emergencias</span>
+            </div>
+            <div class="nav-item" data-screen="history">
+                <span class="nav-icon">🕒</span>
+                <span>Historial</span>
+            </div>
+            <div class="nav-item active" data-screen="profile">
+                <span class="nav-icon">👤</span>
+                <span>Perfil</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- PANTALLA 8: EDITAR PERFIL -->
+    <div class="screen" id="screen-edit-profile">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <button class="back-button" onclick="navigateTo('profile')">← Volver</button>
+            <h2>Editar Perfil</h2>
+        </div>
+        
+        <div class="screen-content">
+            <form id="edit-profile-form" class="form-container">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Correo Institucional</label>
+                    <input type="email" id="edit-email" disabled>
+                    <small class="form-hint">El correo no se puede modificar</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>RUT</label>
+                    <input type="text" id="edit-rut" disabled>
+                    <small class="form-hint">El RUT no se puede modificar</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="edit-phone" placeholder="+56 9 1234 5678">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PANTALLA 9: AGREGAR CONTACTO -->
+    <div class="screen" id="screen-add-contact">
+        <div class="phone-status-bar">
+            <span>9:41</span>
+            <span>📶 WiFi 🔋87%</span>
+        </div>
+        
+        <div class="screen-header">
+            <button class="back-button" onclick="navigateTo('profile')">← Volver</button>
+            <h2>Agregar Contacto de Emergencia</h2>
+        </div>
+        
+        <div class="screen-content">
+            <form id="add-contact-form" class="form-container">
+                <div class="form-group">
+                    <label>Nombre del Contacto</label>
+                    <input type="text" id="contact-name" placeholder="Ej: Mamá" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Relación</label>
+                    <select id="contact-relation" required>
+                        <option value="">Selecciona una relación</option>
+                        <option value="madre">Madre</option>
+                        <option value="padre">Padre</option>
+                        <option value="hermano">Hermano/a</option>
+                        <option value="pareja">Pareja</option>
+                        <option value="amigo">Amigo/a</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="contact-phone" placeholder="+56 9 1234 5678" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Agregar Contacto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CHATBOT DE EMERGENCIAS -->
+    <div class="modal" id="chatbot-modal">
+        <div class="modal-content chatbot-content">
+            <div class="modal-header">
+                <h3>💬 Asistente de Emergencias</h3>
+                <button class="modal-close" id="close-chatbot">✕</button>
+            </div>
+            
+            <div class="chatbot-messages" id="chatbot-messages">
+                <div class="bot-message">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-bubble">
+                        <p>Hola, soy tu asistente de emergencias SafePath. ¿En qué puedo ayudarte?</p>
+                        <div class="quick-replies">
+                            <button class="quick-reply" data-action="police">🚔 Llamar a Carabineros</button>
+                            <button class="quick-reply" data-action="ambulance">🚑 Llamar Ambulancia</button>
+                            <button class="quick-reply" data-action="fire">🚒 Llamar Bomberos</button>
+                            <button class="quick-reply" data-action="info">ℹ️ Más información</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chatbot-input">
+                <input type="text" id="chatbot-input-field" placeholder="Escribe tu consulta...">
+                <button id="chatbot-send">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRMACIÓN SOS -->
+    <div class="modal" id="sos-modal">
+        <div class="modal-content sos-content">
+            <div class="sos-header">
+                <h2>🚨 ALERTA SOS ACTIVADA</h2>
+            </div>
+            
+            <div class="sos-body">
+                <div class="sos-animation">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-1"></div>
+                    <div class="pulse-ring delay-2"></div>
+                    <span class="sos-icon">🚨</span>
+                </div>
+                
+                <p class="sos-message">Tu ubicación ha sido registrada:</p>
+                <p class="sos-location" id="sos-location-display"></p>
+                
+                <p class="sos-info">Se ha enviado una alerta a Seguridad INACAP</p>
+                
+                <div class="sos-actions">
+                    <a href="tel:133" class="btn btn-danger btn-large">📞 Llamar a Carabineros (133)</a>
+                    <a href="tel:131" class="btn btn-warning btn-large">🚑 Llamar Ambulancia (131)</a>
+                    <button class="btn btn-info" id="sos-chatbot">💬 Hablar con Asistente</button>
+                </div>
+            </div>
+            
+            <button class="btn btn-secondary" id="close-sos">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE DE REPORTE -->
+    <div class="modal" id="report-detail-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalle del Reporte</h3>
+                <button class="modal-close" id="close-report-detail">✕</button>
+            </div>
+            <div id="report-detail-content">
+                <!-- Se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICACIÓN FLOTANTE -->
+    <div class="notification" id="notification">
+        <span id="notification-text"></span>
+    </div>
+
+    <!-- LOADER -->
+    <div class="loader-overlay" id="loader" style="display: none;">
+        <div class="loader-spinner"></div>
+        <p>Cargando...</p>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
